@@ -1,8 +1,9 @@
 # Muli Webassembly Demo
 
-![logo](.github/logo.gif)
+[![pages-build-deployment](https://github.com/Sopiro/muli-wasm/actions/workflows/pages/pages-build-deployment/badge.svg)](https://github.com/Sopiro/muli-wasm/actions/workflows/pages/pages-build-deployment)  
 
-Muli webassembly demo
+[Muli](https://github.com/Sopiro/Muli) engine webassembly demo  
+Live demo: https://sopiro.github.io/muli-wasm/  
 
 ## Building and running
 - Install [CMake](https://cmake.org/install/) and [Emscripten](https://emscripten.org/docs/getting_started/downloads.html)
