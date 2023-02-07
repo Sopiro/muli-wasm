@@ -1,0 +1,3 @@
+[submodule "extern/muli"]
+	path = extern/muli
+	url = https://github.com/Sopiro/Muli
