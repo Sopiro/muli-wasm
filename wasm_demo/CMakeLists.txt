@@ -107,17 +107,18 @@ if(EMSCRIPTEN)
     set(CMAKE_EXECUTABLE_SUFFIX .html)
 
     target_link_options(index PRIVATE
+        -sWASM=1
         -sALLOW_MEMORY_GROWTH=1
         -sASSERTIONS=1
-        -sMAXIMUM_MEMORY=1000MB
+        -sSTACK_SIZE=50MB
         -sINITIAL_MEMORY=100MB
-        -sSTACK_SIZE=20MB
+        -sMAXIMUM_MEMORY=1000MB
         -sUSE_GLFW=3
+        -sUSE_WEBGL2=1
         -sMAX_WEBGL_VERSION=2
         -sMIN_WEBGL_VERSION=2
         -O3
         -std=c++17
-        -sUSE_WEBGL2=1
     )
 endif()
 
