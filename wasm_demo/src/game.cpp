@@ -205,7 +205,7 @@ void Game::Render()
             RigidBody* b = j->GetBodyA();
             GrabJoint* gj = static_cast<GrabJoint*>(j);
 
-            const Vec2& anchor = b->GetTransform() * gj->GetLocalAnchor();
+            const Vec2& anchor = Mul(b->GetTransform(), gj->GetLocalAnchor());
             points.emplace_back(anchor);
             points.emplace_back(gj->GetTarget());
 
@@ -220,8 +220,8 @@ void Game::Render()
             RigidBody* bb = j->GetBodyB();
             RevoluteJoint* rj = static_cast<RevoluteJoint*>(j);
 
-            const Vec2& anchorA = ba->GetTransform() * rj->GetLocalAnchorA();
-            const Vec2& anchorB = bb->GetTransform() * rj->GetLocalAnchorB();
+            const Vec2& anchorA = Mul(ba->GetTransform(), rj->GetLocalAnchorA());
+            const Vec2& anchorB = Mul(bb->GetTransform(), rj->GetLocalAnchorB());
 
             points.emplace_back(anchorA);
             points.emplace_back(anchorB);
@@ -238,8 +238,8 @@ void Game::Render()
             RigidBody* bb = j->GetBodyB();
             DistanceJoint* dj = static_cast<DistanceJoint*>(j);
 
-            const Vec2& anchorA = ba->GetTransform() * dj->GetLocalAnchorA();
-            const Vec2& anchorB = bb->GetTransform() * dj->GetLocalAnchorB();
+            const Vec2& anchorA = Mul(ba->GetTransform(), dj->GetLocalAnchorA());
+            const Vec2& anchorB = Mul(bb->GetTransform(), dj->GetLocalAnchorB());
 
             points.emplace_back(anchorA);
             points.emplace_back(anchorB);
@@ -254,8 +254,8 @@ void Game::Render()
             RigidBody* bb = j->GetBodyB();
             LineJoint* lj = static_cast<LineJoint*>(j);
 
-            const Vec2& anchorA = ba->GetTransform() * lj->GetLocalAnchorA();
-            const Vec2& anchorB = bb->GetTransform() * lj->GetLocalAnchorB();
+            const Vec2& anchorA = Mul(ba->GetTransform(), lj->GetLocalAnchorA());
+            const Vec2& anchorB = Mul(bb->GetTransform(), lj->GetLocalAnchorB());
 
             points.emplace_back(anchorA);
             points.emplace_back(anchorB);
@@ -269,8 +269,8 @@ void Game::Render()
             RigidBody* bb = j->GetBodyB();
             PrismaticJoint* pj = static_cast<PrismaticJoint*>(j);
 
-            const Vec2& anchorA = ba->GetTransform() * pj->GetLocalAnchorA();
-            const Vec2& anchorB = bb->GetTransform() * pj->GetLocalAnchorB();
+            const Vec2& anchorA = Mul(ba->GetTransform(), pj->GetLocalAnchorA());
+            const Vec2& anchorB = Mul(bb->GetTransform(), pj->GetLocalAnchorB());
 
             points.emplace_back(anchorA);
             points.emplace_back(anchorB);
@@ -285,8 +285,8 @@ void Game::Render()
             RigidBody* bb = j->GetBodyB();
             PulleyJoint* pj = static_cast<PulleyJoint*>(j);
 
-            const Vec2& anchorA = ba->GetTransform() * pj->GetLocalAnchorA();
-            const Vec2& anchorB = bb->GetTransform() * pj->GetLocalAnchorB();
+            const Vec2& anchorA = Mul(ba->GetTransform(), pj->GetLocalAnchorA());
+            const Vec2& anchorB = Mul(bb->GetTransform(), pj->GetLocalAnchorB());
             const Vec2& groundAnchorA = pj->GetGroundAnchorA();
             const Vec2& groundAnchorB = pj->GetGroundAnchorB();
 
@@ -309,8 +309,8 @@ void Game::Render()
             RigidBody* bb = j->GetBodyB();
             MotorJoint* pj = static_cast<MotorJoint*>(j);
 
-            const Vec2& anchorA = ba->GetTransform() * pj->GetLocalAnchorA();
-            const Vec2& anchorB = bb->GetTransform() * pj->GetLocalAnchorB();
+            const Vec2& anchorA = Mul(ba->GetTransform(), pj->GetLocalAnchorA());
+            const Vec2& anchorB = Mul(bb->GetTransform(), pj->GetLocalAnchorB());
 
             points.emplace_back(anchorA);
             points.emplace_back(anchorB);
