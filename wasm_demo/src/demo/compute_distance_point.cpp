@@ -15,7 +15,7 @@ public:
     ComputeDistancePoint(Game& game)
         : Demo(game)
     {
-        options.draw_outline_only = true;
+        options.draw_outlined = true;
         options.show_contact_normal = true;
         options.show_contact_point = true;
         settings.apply_gravity = false;
@@ -62,17 +62,9 @@ public:
 
     void Render() override
     {
-        std::vector<Vec2>& pl = game.GetPointList();
-        std::vector<Vec2>& ll = game.GetLineList();
-
-        // pl.push_back(b->GetPosition());
-        // ll.push_back(b->GetPosition());
-        // ll.push_back(mpos);
-
-        pl.push_back(closest);
-        pl.push_back(cursorPos);
-        ll.push_back(closest);
-        ll.push_back(cursorPos);
+        renderer.DrawPoint(closest);
+        renderer.DrawPoint(cursorPos);
+        renderer.DrawLine(closest, cursorPos);
     }
 
     void UpdateUI() override
@@ -87,7 +79,7 @@ public:
 
     ~ComputeDistancePoint()
     {
-        options.draw_outline_only = false;
+        options.draw_outlined = false;
         options.show_contact_normal = false;
         options.show_contact_point = false;
     }

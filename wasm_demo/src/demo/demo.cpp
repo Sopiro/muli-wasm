@@ -7,10 +7,11 @@ namespace muli
 
 Demo::Demo(Game& _game)
     : game{ _game }
+    , renderer{ _game.GetRenderer() }
     , options{ _game.GetDebugOptions() }
     , targetBody{ nullptr }
     , targetCollider{ nullptr }
-    , gj{ nullptr }
+    , cursorJoint{ nullptr }
 {
     settings.world_bounds.min.y = -20.0f;
 
@@ -71,6 +72,22 @@ void Demo::EnableBodyCreate()
     static bool create_circle;
     static Vec2 mStart;
 
+    if (Input::IsKeyDown(GLFW_KEY_1))
+    {
+        RigidBody* b = world->CreateBox(0.5f);
+        b->SetPosition(cursorPos);
+    }
+    if (Input::IsKeyDown(GLFW_KEY_2))
+    {
+        RigidBody* b = world->CreateCircle(0.25f);
+        b->SetPosition(cursorPos);
+    }
+    if (Input::IsKeyDown(GLFW_KEY_3))
+    {
+        RigidBody* b = world->CreateCapsule(0.5f, 0.25f);
+        b->SetPosition(cursorPos);
+    }
+
     if (!targetCollider && Input::IsMousePressed(GLFW_MOUSE_BUTTON_LEFT))
     {
         if (Input::IsKeyDown(GLFW_KEY_LEFT_SHIFT))
@@ -83,11 +100,10 @@ void Demo::EnableBodyCreate()
         {
             RigidBody* b = world->CreateBox(0.5f);
             b->SetPosition(cursorPos);
-            game.RegisterRenderBody(b);
         }
     }
 
-    if (targetCollider && !gj && Input::IsMousePressed(GLFW_MOUSE_BUTTON_RIGHT))
+    if (targetCollider && !cursorJoint && Input::IsMousePressed(GLFW_MOUSE_BUTTON_RIGHT))
     {
         targetBody->DestoryCollider(targetCollider);
         if (targetBody->GetColliderCount() == 0)
@@ -98,13 +114,9 @@ void Demo::EnableBodyCreate()
 
     if (create)
     {
-        auto& pl = game.GetPointList();
-        auto& ll = game.GetLineList();
-
-        pl.push_back(mStart);
-        pl.push_back(cursorPos);
-        ll.push_back(mStart);
-        ll.push_back(cursorPos);
+        renderer.DrawPoint(mStart);
+        renderer.DrawPoint(cursorPos);
+        renderer.DrawLine(mStart, cursorPos);
 
         if (Input::IsMouseReleased(GLFW_MOUSE_BUTTON_LEFT))
         {
@@ -116,7 +128,6 @@ void Demo::EnableBodyCreate()
             f *= settings.inv_dt * b->GetMass() * 7.0f;
             b->SetForce(f);
             create = false;
-            game.RegisterRenderBody(b);
         }
     }
 }
@@ -147,10 +158,10 @@ bool Demo::EnablePolygonCreate()
 
     if (creating)
     {
-        std::vector<Vec2>& pl = game.GetPointList();
-        std::vector<Vec2>& ll = game.GetLineList();
-
-        pl = points;
+        for (Vec2& point : points)
+        {
+            renderer.DrawPoint(point);
+        }
 
         if (Input::IsMousePressed(GLFW_MOUSE_BUTTON_LEFT))
         {
@@ -160,16 +171,14 @@ bool Demo::EnablePolygonCreate()
 
         if (hull.size() < 3)
         {
-            ll.push_back(hull.back());
-            ll.push_back(cursorPos);
+            renderer.DrawLine(hull.back(), cursorPos);
         }
 
         for (size_t i = 0; i < hull.size(); ++i)
         {
             Vec2& v0 = hull[i];
             Vec2& v1 = hull[(i + 1) % hull.size()];
-            ll.push_back(v0);
-            ll.push_back(v1);
+            renderer.DrawLine(v0, v1);
         }
 
         auto create_body = [&](RigidBody::Type type) {
@@ -199,7 +208,6 @@ bool Demo::EnablePolygonCreate()
 
             b->SetContinuous(settings.continuous);
 
-            game.RegisterRenderBody(b);
             creating = false;
             points.clear();
             hull.clear();
@@ -231,18 +239,15 @@ void Demo::EnableBodyRemove()
 
     if (draging)
     {
-        auto& ll = game.GetLineList();
-
         AABB aabb{ Min(mStart, cursorPos), Max(mStart, cursorPos) };
 
-        ll.push_back(aabb.min);
-        ll.push_back(Vec2{ aabb.min.x, aabb.max.y });
-        ll.push_back(Vec2{ aabb.min.x, aabb.max.y });
-        ll.push_back(aabb.max);
-        ll.push_back(aabb.max);
-        ll.push_back(Vec2{ aabb.max.x, aabb.min.y });
-        ll.push_back(Vec2{ aabb.max.x, aabb.min.y });
-        ll.push_back(aabb.min);
+        Vec2 br{ aabb.min.x, aabb.max.y };
+        Vec2 tl{ aabb.max.x, aabb.min.y };
+
+        renderer.DrawLine(aabb.min, br);
+        renderer.DrawLine(br, aabb.max);
+        renderer.DrawLine(aabb.max, tl);
+        renderer.DrawLine(tl, aabb.min);
 
         if (Input::IsMouseReleased(GLFW_MOUSE_BUTTON_MIDDLE))
         {
@@ -272,26 +277,26 @@ bool Demo::EnableBodyGrab()
         if (targetBody->GetType() == RigidBody::Type::dynamic_body)
         {
             targetBody->Awake();
-            gj = world->CreateGrabJoint(targetBody, cursorPos, cursorPos, 4.0f, 0.5f, targetBody->GetMass());
-            gj->OnDestroy = this;
+            cursorJoint = world->CreateGrabJoint(targetBody, cursorPos, cursorPos, 4.0f, 0.5f, targetBody->GetMass());
+            cursorJoint->OnDestroy = this;
         }
     }
 
-    if (gj)
+    if (cursorJoint)
     {
-        gj->SetTarget(cursorPos);
+        cursorJoint->SetTarget(cursorPos);
         if (Input::IsMouseReleased(GLFW_MOUSE_BUTTON_LEFT))
         {
-            world->Destroy(gj);
-            gj = nullptr;
+            world->Destroy(cursorJoint);
+            cursorJoint = nullptr;
         }
         else if (Input::IsMousePressed(GLFW_MOUSE_BUTTON_RIGHT))
         {
-            gj = nullptr; // Stick to the air!
+            cursorJoint = nullptr; // Stick to the air!
         }
     }
 
-    return gj != nullptr;
+    return cursorJoint != nullptr;
 }
 
 bool Demo::EnableAddForce()
@@ -310,20 +315,17 @@ bool Demo::EnableAddForce()
 
     if (ft)
     {
-        auto& pl = game.GetPointList();
-        auto& ll = game.GetLineList();
+        Vec2 tl = Mul(ft->GetTransform(), mStartLocal);
 
-        pl.push_back(Mul(ft->GetTransform(), mStartLocal));
-        pl.push_back(cursorPos);
-        ll.push_back(Mul(ft->GetTransform(), mStartLocal));
-        ll.push_back(cursorPos);
+        renderer.DrawPoint(tl);
+        renderer.DrawPoint(cursorPos);
+        renderer.DrawLine(tl, cursorPos);
 
         if (Input::IsMouseReleased(GLFW_MOUSE_BUTTON_LEFT))
         {
             if (ft->GetWorld())
             {
-                Vec2 mStartGlobal = Mul(ft->GetTransform(), mStartLocal);
-                Vec2 f = mStartGlobal - cursorPos;
+                Vec2 f = tl - cursorPos;
                 f *= settings.inv_dt * ft->GetMass() * 3.0f;
 
                 ft->AddForce(mStartLocal, f);
@@ -338,7 +340,8 @@ bool Demo::EnableAddForce()
 
 void Demo::EnableKeyboardShortcut()
 {
-    if (Input::IsKeyPressed(GLFW_KEY_O)) options.draw_outline_only = !options.draw_outline_only;
+    if (Input::IsKeyPressed(GLFW_KEY_Y)) options.draw_body = !options.draw_body;
+    if (Input::IsKeyPressed(GLFW_KEY_O)) options.draw_outlined = !options.draw_outlined;
     if (Input::IsKeyPressed(GLFW_KEY_L)) options.colorize_island = !options.colorize_island;
     if (Input::IsKeyPressed(GLFW_KEY_V)) options.show_bvh = !options.show_bvh;
     if (Input::IsKeyPressed(GLFW_KEY_B)) options.show_aabb = !options.show_aabb;

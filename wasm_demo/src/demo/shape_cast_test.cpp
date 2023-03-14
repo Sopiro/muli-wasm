@@ -48,34 +48,29 @@ public:
             Transform thA = tfA;
             Transform thB = tfB;
 
-            const RigidBodyRenderer& rr = game.GetRigidBodyRenderer();
-            std::vector<Vec2>& pl = game.GetPointList();
-            std::vector<Vec2>& ll = game.GetLineList();
+            Renderer& renderer = game.GetRenderer();
 
             hit = ShapeCast(sa, tfA, sb, tfB, translationA, translationB, &output);
             if (hit)
             {
                 thA.position += translationA * output.t;
-                rr.Render(ca, thA);
+                renderer.DrawShapeOutlined(ca->GetShape(), thA);
                 thB.position += translationB * output.t;
-                rr.Render(cb, thB);
+                renderer.DrawShapeOutlined(cb->GetShape(), thB);
 
-                pl.push_back(output.point);
-                ll.push_back(output.point);
-                ll.push_back(output.point + output.normal * 0.2f);
+                renderer.DrawPoint(output.point);
+                renderer.DrawLine(output.point, output.point + output.normal * 0.2f);
             }
             else
             {
                 thA.position += translationA;
-                rr.Render(ca, thA);
+                renderer.DrawShapeOutlined(ca->GetShape(), thA);
                 thB.position += translationB;
-                rr.Render(cb, thB);
+                renderer.DrawShapeOutlined(cb->GetShape(), thB);
             }
 
-            ll.push_back(tfA.position);
-            ll.push_back(thA.position);
-            ll.push_back(tfB.position);
-            ll.push_back(thB.position);
+            renderer.DrawLine(tfA.position, thA.position);
+            renderer.DrawLine(tfB.position, thB.position);
         }
     }
 

@@ -11,7 +11,7 @@ public:
     ComputeDistanceShape(Game& game)
         : Demo(game)
     {
-        options.draw_outline_only = true;
+        options.draw_outlined = true;
         options.show_contact_normal = true;
         options.show_contact_point = true;
         settings.apply_gravity = false;
@@ -79,12 +79,9 @@ public:
 
             if (distance > 0.0f)
             {
-                std::vector<Vec2>& pl = game.GetPointList();
-                std::vector<Vec2>& ll = game.GetLineList();
-                pl.push_back(pointA);
-                pl.push_back(pointB);
-                ll.push_back(pointA);
-                ll.push_back(pointB);
+                renderer.DrawPoint(pointA);
+                renderer.DrawPoint(pointB);
+                renderer.DrawLine(pointA, pointB);
 
                 ImGui::SetNextWindowPos({ Window::Get().GetWindowSize().x - 5, 5 }, ImGuiCond_Always, { 1.0f, 0.0f });
                 ImGui::Begin("Distance between shapes", NULL,
@@ -107,7 +104,7 @@ public:
 
     ~ComputeDistanceShape()
     {
-        options.draw_outline_only = false;
+        options.draw_outlined = false;
         options.show_contact_normal = false;
         options.show_contact_point = false;
     }

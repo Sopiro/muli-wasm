@@ -3,11 +3,6 @@
 namespace muli
 {
 
-std::unique_ptr<DynamicShader> DynamicShader::Create()
-{
-    return std::unique_ptr<DynamicShader>(new DynamicShader);
-}
-
 DynamicShader::DynamicShader()
     : Shader(
           // Vertex shader
@@ -15,14 +10,18 @@ DynamicShader::DynamicShader()
         #version 100
 
         attribute vec2 pos;
+        attribute vec4 color;
+
+        varying vec4 f_color;
 
         uniform mat4 view;
         uniform mat4 proj;
-        uniform mat4 model;
 
         void main()
         {
-           mat4 mvp = proj * view * model;
+           mat4 mvp = proj * view;
+
+           f_color = color;
            gl_PointSize = 5.0;
            gl_Position = mvp * vec4(pos, 0.0, 1.0);
         }
@@ -32,11 +31,11 @@ DynamicShader::DynamicShader()
         #version 100
         precision mediump float;
 
-        uniform vec3 color;
+        varying vec4 f_color;
 
         void main()
         {
-            gl_FragColor = vec4(color, 1.0);
+            gl_FragColor = f_color;
         }
     )")
 {

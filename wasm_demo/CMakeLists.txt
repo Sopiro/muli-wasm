@@ -4,12 +4,9 @@ set(WINDOW_HEIGHT 720)
 
 set(DEMO_HEADER_FILES
     include/mesh.h
-    include/renderer.h
     include/shader.h
-    include/dynamic_renderer.h
     include/dynamic_shader.h
-    include/rigidbody_renderer.h
-    include/rigidbody_shader.h
+    include/renderer.h
 
     include/window.h
     include/camera.h
@@ -27,12 +24,10 @@ set(DEMO_SOURCE_FILES
     src/game.cpp
     src/util.cpp
 
-    src/rendering/shader.cpp
-    src/rendering/rigidbody_shader.cpp
-    src/rendering/rigidbody_renderer.cpp
     src/rendering/mesh.cpp
+    src/rendering/shader.cpp
     src/rendering/dynamic_shader.cpp
-    src/rendering/dynamic_renderer.cpp
+    src/rendering/renderer.cpp
 
     src/demo/demo.cpp
     src/demo/single_box.cpp

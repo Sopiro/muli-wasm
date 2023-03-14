@@ -4,7 +4,6 @@ namespace muli
 {
 
 Game::Game()
-    : rRenderer{ *this }
 {
     UpdateProjectionMatrix();
     Window::Get().SetFramebufferSizeChangeCallback([&](int32 width, int32 height) -> void {
@@ -101,19 +100,25 @@ void Game::UpdateUI()
                 {
                     ImGui::Checkbox("Camera reset", &options.reset_camera);
                     ImGui::Checkbox("Colorize island", &options.colorize_island);
-                    ImGui::Checkbox("Draw outline only", &options.draw_outline_only);
+                    ImGui::Checkbox("Draw body", &options.draw_body);
+                    ImGui::Checkbox("Draw outlined", &options.draw_outlined);
                     ImGui::Checkbox("Show BVH", &options.show_bvh);
                     ImGui::Checkbox("Show AABB", &options.show_aabb);
                     ImGui::Checkbox("Show contact point", &options.show_contact_point);
                     ImGui::Checkbox("Show contact normal", &options.show_contact_normal);
                 }
 
+                World& world = demo->GetWorld();
+                WorldSettings& settings = demo->GetWorldSettings();
+
                 ImGui::SetNextItemOpen(true, ImGuiCond_Once);
                 if (ImGui::CollapsingHeader("Simulation settings"))
                 {
-                    WorldSettings& settings = demo->GetWorldSettings();
+                    if (ImGui::Checkbox("Apply gravity", &settings.apply_gravity))
+                    {
+                        world.Awake();
+                    }
 
-                    if (ImGui::Checkbox("Apply gravity", &settings.apply_gravity)) demo->GetWorld().Awake();
                     ImGui::Text("Constraint solve iterations");
                     {
                         ImGui::SetNextItemWidth(120);
@@ -132,8 +137,6 @@ void Game::UpdateUI()
                     ImGui::Checkbox("Continuous", &settings.continuous);
                     ImGui::Checkbox("Sub-stepping", &settings.sub_stepping);
                 }
-
-                World& world = demo->GetWorld();
 
                 ImGui::Separator();
                 ImGui::Text("%s", demos[demoIndex].name);
@@ -190,11 +193,57 @@ void Game::UpdateUI()
 
 void Game::Render()
 {
+    World& world = demo->GetWorld();
     Camera& camera = demo->GetCamera();
-    rRenderer.SetViewMatrix(camera.GetCameraMatrix());
-    rRenderer.Render();
+    Mat4 cameraMatrix = camera.GetCameraMatrix();
 
-    for (Joint* j = demo->GetWorld().GetJoints(); j; j = j->GetNext())
+    renderer.SetViewMatrix(cameraMatrix);
+    renderer.SetPointSize(5.0f);
+    renderer.SetLineWidth(1.0f);
+
+    // Draw bodies
+    if (options.draw_body)
+    {
+        if (options.draw_outlined)
+        {
+            for (RigidBody* b = world.GetBodyList(); b; b = b->GetNext())
+            {
+                const Transform& tf = b->GetTransform();
+                bool drawRounded = b->UserFlag & UserFlag::render_polygon_radius;
+
+                for (Collider* c = b->GetColliderList(); c; c = c->GetNext())
+                {
+                    renderer.DrawShapeOutlined(c->GetShape(), tf, drawRounded);
+                }
+            }
+        }
+        else
+        {
+            for (RigidBody* b = world.GetBodyList(); b; b = b->GetNext())
+            {
+                const Transform& tf = b->GetTransform();
+                bool drawRounded = b->UserFlag & UserFlag::render_polygon_radius;
+
+                if (b->IsSleeping())
+                {
+                    for (Collider* c = b->GetColliderList(); c; c = c->GetNext())
+                    {
+                        renderer.DrawShapeOutlined(c->GetShape(), tf, drawRounded);
+                    }
+                }
+                else
+                {
+                    for (Collider* c = b->GetColliderList(); c; c = c->GetNext())
+                    {
+                        renderer.DrawShapeSolid(c->GetShape(), tf, b->GetIslandID() - 1, drawRounded);
+                    }
+                }
+            }
+        }
+    }
+
+    // Draw joints
+    for (Joint* j = world.GetJoints(); j; j = j->GetNext())
     {
         Joint::Type type = j->GetType();
 
@@ -203,147 +252,136 @@ void Game::Render()
         case Joint::Type::grab_joint:
         {
             RigidBody* b = j->GetBodyA();
-            GrabJoint* gj = static_cast<GrabJoint*>(j);
+            const GrabJoint* gj = static_cast<const GrabJoint*>(j);
 
             const Vec2& anchor = Mul(b->GetTransform(), gj->GetLocalAnchor());
-            points.emplace_back(anchor);
-            points.emplace_back(gj->GetTarget());
+            renderer.DrawPoint(anchor);
+            renderer.DrawPoint(gj->GetTarget());
 
-            lines.emplace_back(anchor);
-            lines.emplace_back(gj->GetTarget());
+            renderer.DrawLine(anchor, gj->GetTarget());
         }
         break;
         case Joint::Type::revolute_joint:
         {
-
             RigidBody* ba = j->GetBodyA();
             RigidBody* bb = j->GetBodyB();
-            RevoluteJoint* rj = static_cast<RevoluteJoint*>(j);
+            const RevoluteJoint* rj = static_cast<const RevoluteJoint*>(j);
 
             const Vec2& anchorA = Mul(ba->GetTransform(), rj->GetLocalAnchorA());
             const Vec2& anchorB = Mul(bb->GetTransform(), rj->GetLocalAnchorB());
 
-            points.emplace_back(anchorA);
-            points.emplace_back(anchorB);
+            renderer.DrawPoint(anchorA);
+            renderer.DrawPoint(anchorB);
 
-            lines.emplace_back(anchorA);
-            lines.emplace_back(ba->GetPosition());
-            lines.emplace_back(anchorB);
-            lines.emplace_back(bb->GetPosition());
+            renderer.DrawLine(anchorA, ba->GetPosition());
+            renderer.DrawLine(anchorB, bb->GetPosition());
         }
         break;
         case Joint::Type::distance_joint:
         {
             RigidBody* ba = j->GetBodyA();
             RigidBody* bb = j->GetBodyB();
-            DistanceJoint* dj = static_cast<DistanceJoint*>(j);
+            const DistanceJoint* dj = static_cast<const DistanceJoint*>(j);
 
             const Vec2& anchorA = Mul(ba->GetTransform(), dj->GetLocalAnchorA());
             const Vec2& anchorB = Mul(bb->GetTransform(), dj->GetLocalAnchorB());
 
-            points.emplace_back(anchorA);
-            points.emplace_back(anchorB);
+            renderer.DrawPoint(anchorA);
+            renderer.DrawPoint(anchorB);
 
-            lines.emplace_back(anchorA);
-            lines.emplace_back(anchorB);
+            renderer.DrawLine(anchorA, anchorB);
         }
         break;
         case Joint::Type::line_joint:
         {
             RigidBody* ba = j->GetBodyA();
             RigidBody* bb = j->GetBodyB();
-            LineJoint* lj = static_cast<LineJoint*>(j);
+            const LineJoint* lj = static_cast<const LineJoint*>(j);
 
             const Vec2& anchorA = Mul(ba->GetTransform(), lj->GetLocalAnchorA());
             const Vec2& anchorB = Mul(bb->GetTransform(), lj->GetLocalAnchorB());
 
-            points.emplace_back(anchorA);
-            points.emplace_back(anchorB);
+            renderer.DrawPoint(anchorA);
+            renderer.DrawPoint(anchorB);
 
-            lines.emplace_back(anchorA);
-            lines.emplace_back(anchorB);
+            renderer.DrawLine(anchorA, anchorB);
         }
         case Joint::Type::prismatic_joint:
         {
             RigidBody* ba = j->GetBodyA();
             RigidBody* bb = j->GetBodyB();
-            PrismaticJoint* pj = static_cast<PrismaticJoint*>(j);
+            const PrismaticJoint* pj = static_cast<const PrismaticJoint*>(j);
 
             const Vec2& anchorA = Mul(ba->GetTransform(), pj->GetLocalAnchorA());
             const Vec2& anchorB = Mul(bb->GetTransform(), pj->GetLocalAnchorB());
 
-            points.emplace_back(anchorA);
-            points.emplace_back(anchorB);
+            renderer.DrawPoint(anchorA);
+            renderer.DrawPoint(anchorB);
 
-            lines.emplace_back(anchorA);
-            lines.emplace_back(anchorB);
+            renderer.DrawLine(anchorA, anchorB);
         }
         break;
         case Joint::Type::pulley_joint:
         {
             RigidBody* ba = j->GetBodyA();
             RigidBody* bb = j->GetBodyB();
-            PulleyJoint* pj = static_cast<PulleyJoint*>(j);
+            const PulleyJoint* pj = static_cast<const PulleyJoint*>(j);
 
             const Vec2& anchorA = Mul(ba->GetTransform(), pj->GetLocalAnchorA());
             const Vec2& anchorB = Mul(bb->GetTransform(), pj->GetLocalAnchorB());
             const Vec2& groundAnchorA = pj->GetGroundAnchorA();
             const Vec2& groundAnchorB = pj->GetGroundAnchorB();
 
-            points.emplace_back(anchorA);
-            points.emplace_back(groundAnchorA);
-            points.emplace_back(anchorB);
-            points.emplace_back(groundAnchorB);
+            renderer.DrawPoint(anchorA);
+            renderer.DrawPoint(groundAnchorA);
+            renderer.DrawPoint(anchorB);
+            renderer.DrawPoint(groundAnchorB);
 
-            lines.emplace_back(anchorA);
-            lines.emplace_back(groundAnchorA);
-            lines.emplace_back(anchorB);
-            lines.emplace_back(groundAnchorB);
-            lines.emplace_back(groundAnchorA);
-            lines.emplace_back(groundAnchorB);
+            renderer.DrawLine(anchorA, groundAnchorA);
+            renderer.DrawLine(anchorB, groundAnchorB);
+            renderer.DrawLine(groundAnchorA, groundAnchorB);
         }
         break;
         case Joint::Type::motor_joint:
         {
             RigidBody* ba = j->GetBodyA();
             RigidBody* bb = j->GetBodyB();
-            MotorJoint* pj = static_cast<MotorJoint*>(j);
+            const MotorJoint* pj = static_cast<const MotorJoint*>(j);
 
             const Vec2& anchorA = Mul(ba->GetTransform(), pj->GetLocalAnchorA());
             const Vec2& anchorB = Mul(bb->GetTransform(), pj->GetLocalAnchorB());
 
-            points.emplace_back(anchorA);
-            points.emplace_back(anchorB);
+            renderer.DrawPoint(anchorA);
+            renderer.DrawPoint(anchorB);
         }
         break;
         default:
+            muliAssert(false);
             break;
         }
     }
 
     if (options.show_bvh || options.show_aabb)
     {
-        const AABBTree& tree = demo->GetWorld().GetDynamicTree();
+        const AABBTree& tree = world.GetDynamicTree();
         tree.Traverse([&](const Node* n) -> void {
             if (options.show_bvh == false && n->IsLeaf() == false)
             {
                 return;
             }
 
-            lines.emplace_back(n->aabb.min);
-            lines.emplace_back(n->aabb.max.x, n->aabb.min.y);
-            lines.emplace_back(n->aabb.max.x, n->aabb.min.y);
-            lines.emplace_back(n->aabb.max);
-            lines.emplace_back(n->aabb.max);
-            lines.emplace_back(n->aabb.min.x, n->aabb.max.y);
-            lines.emplace_back(n->aabb.min.x, n->aabb.max.y);
-            lines.emplace_back(n->aabb.min);
+            Vec2 br{ n->aabb.max.x, n->aabb.min.y };
+            Vec2 tl{ n->aabb.min.x, n->aabb.max.y };
+            renderer.DrawLine(n->aabb.min, br);
+            renderer.DrawLine(br, n->aabb.max);
+            renderer.DrawLine(n->aabb.max, tl);
+            renderer.DrawLine(tl, n->aabb.min);
         });
     }
 
     if (options.show_contact_point || options.show_contact_normal)
     {
-        const Contact* c = demo->GetWorld().GetContacts();
+        const Contact* c = world.GetContacts();
 
         while (c)
         {
@@ -361,18 +399,13 @@ void Game::Render()
 
                 if (options.show_contact_point)
                 {
-                    points.emplace_back(cp);
+                    renderer.DrawPoint(cp);
                 }
                 if (options.show_contact_normal)
                 {
-                    lines.emplace_back(cp);
-                    lines.emplace_back(cp + m.contactNormal * 0.15f);
-
-                    lines.emplace_back(cp + m.contactNormal * 0.15f);
-                    lines.emplace_back(cp + m.contactNormal * 0.13f + m.contactTangent * 0.02f);
-
-                    lines.emplace_back(cp + m.contactNormal * 0.15f);
-                    lines.emplace_back(cp + m.contactNormal * 0.13f - m.contactTangent * 0.02f);
+                    renderer.DrawLine(cp, cp + m.contactNormal * 0.15f);
+                    renderer.DrawLine(cp + m.contactNormal * 0.15f, cp + m.contactNormal * 0.13f + m.contactTangent * 0.02f);
+                    renderer.DrawLine(cp + m.contactNormal * 0.15f, cp + m.contactNormal * 0.13f - m.contactTangent * 0.02f);
                 }
             }
 
@@ -380,16 +413,9 @@ void Game::Render()
         }
     }
 
-    dRenderer.SetViewMatrix(camera.GetCameraMatrix());
-
     demo->Render();
 
-    dRenderer.Draw(points, GL_POINTS);
-    glLineWidth(1.0f);
-    dRenderer.Draw(lines, GL_LINES);
-
-    points.clear();
-    lines.clear();
+    renderer.FlushAll();
 }
 
 void Game::UpdateProjectionMatrix()
@@ -398,8 +424,7 @@ void Game::UpdateProjectionMatrix()
     windowSize /= 100.0f;
 
     Mat4 projMatrix = Orth(-windowSize.x / 2.0f, windowSize.x / 2.0f, -windowSize.y / 2.0f, windowSize.y / 2.0f, 0.0f, 1.0f);
-    rRenderer.SetProjectionMatrix(projMatrix);
-    dRenderer.SetProjectionMatrix(projMatrix);
+    renderer.SetProjectionMatrix(projMatrix);
 }
 
 void Game::InitDemo(int32 index)
@@ -427,7 +452,6 @@ void Game::InitDemo(int32 index)
     }
 
     time = 0;
-    rRenderer.Reset();
 
     demoIndex = index;
     demo = demos[demoIndex].createFunction(*this);
@@ -440,11 +464,6 @@ void Game::InitDemo(int32 index)
     if (restoreCameraPosition)
     {
         demo->GetCamera() = prevCamera;
-    }
-
-    for (RigidBody* b = demo->GetWorld().GetBodyList(); b; b = b->GetNext())
-    {
-        RegisterRenderBody(b);
     }
 }
 
