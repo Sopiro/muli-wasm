@@ -37,7 +37,8 @@ public:
 private:
     Renderer renderer;
 
-    float time = 0.0f;
+    int32 frequency;
+    float time;
 
     int32 newIndex;
     int32 demoIndex = -1;

@@ -4,6 +4,8 @@ namespace muli
 {
 
 Game::Game()
+    : frequency{ 60 }
+    , time{ 0.0f }
 {
     UpdateProjectionMatrix();
     Window::Get().SetFramebufferSizeChangeCallback([&](int32 width, int32 height) -> void {
@@ -32,7 +34,10 @@ void Game::Update(float dt)
     time += dt;
 
     UpdateInput();
-    demo->Step(dt);
+
+    float deltaTime = 1.0f / frequency;
+    demo->Step(deltaTime);
+
     UpdateUI();
 }
 
@@ -114,6 +119,9 @@ void Game::UpdateUI()
                 ImGui::SetNextItemOpen(true, ImGuiCond_Once);
                 if (ImGui::CollapsingHeader("Simulation settings"))
                 {
+                    ImGui::SetNextItemWidth(150);
+                    ImGui::SliderInt("Frequency", &frequency, 30, 300, "%d");
+
                     if (ImGui::Checkbox("Apply gravity", &settings.apply_gravity))
                     {
                         world.Awake();
@@ -121,12 +129,12 @@ void Game::UpdateUI()
 
                     ImGui::Text("Constraint solve iterations");
                     {
-                        ImGui::SetNextItemWidth(120);
+                        ImGui::SetNextItemWidth(150);
                         int32 velIterations = settings.velocity_iterations;
                         ImGui::SliderInt("Velocity", &velIterations, 0, 50);
                         settings.velocity_iterations = velIterations;
 
-                        ImGui::SetNextItemWidth(120);
+                        ImGui::SetNextItemWidth(150);
                         int32 posIterations = settings.position_iterations;
                         ImGui::SliderInt("Position", &posIterations, 0, 50);
                         settings.position_iterations = posIterations;
