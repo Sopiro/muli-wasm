@@ -70,7 +70,18 @@ public:
             drawMode.fill = false;
             drawMode.outline = true;
 
-            game.GetRenderer().DrawShape(target->GetColliderList()->GetShape(), t, drawMode);
+            if (target->GetWorld())
+            {
+                if (target->UserFlag & UserFlag::render_polygon_radius)
+                {
+                    drawMode.rounded = true;
+                    game.GetRenderer().DrawShape(target->GetColliderList()->GetShape(), t, drawMode);
+                }
+                else
+                {
+                    game.GetRenderer().DrawShape(target->GetColliderList()->GetShape(), t, drawMode);
+                }
+            }
         }
     }
 
