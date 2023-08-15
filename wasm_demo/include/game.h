@@ -10,7 +10,7 @@
 namespace muli
 {
 
-class Game final : public ColliderDestoryCallback
+class Game final : public ColliderDestroyCallback
 {
 public:
     Game();
