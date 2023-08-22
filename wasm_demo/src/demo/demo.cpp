@@ -124,9 +124,8 @@ void Demo::EnableBodyCreate()
             b->SetPosition(mStart);
             b->SetContinuous(true);
 
-            Vec2 f = mStart - cursorPos;
-            f *= settings.inv_dt * b->GetMass() * 7.0f;
-            b->SetForce(f);
+            Vec2 v = mStart - cursorPos;
+            b->SetLinearVelocity(v * 7.0f);
             create = false;
         }
     }
@@ -325,10 +324,10 @@ bool Demo::EnableAddForce()
         {
             if (ft->GetWorld())
             {
-                Vec2 f = tl - cursorPos;
-                f *= settings.inv_dt * ft->GetMass() * 3.0f;
+                Vec2 i = tl - cursorPos;
+                i *= ft->GetMass() * 3.0f;
 
-                ft->AddForce(mStartLocal, f);
+                ft->ApplyLinearImpulseLocal(mStartLocal, i, true);
             }
 
             ft = nullptr;
